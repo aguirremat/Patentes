@@ -1,0 +1,1 @@
+/home/matias/proyecto/opencv-2.4.13.4/release/Patentes/CMakeFiles/Patentes.dir
