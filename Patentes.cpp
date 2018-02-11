@@ -5,6 +5,12 @@
 #include <stdio.h>
 #include <cv.h>
 #include <highgui.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+
 
 
 #define MUESTRAS 10
@@ -50,7 +56,10 @@ int const max_elem = 2;
 int const max_kernel_size = 21;
 
 //Variables para recortar imagen//
-
+RNG rng(12345);
+int morph_elem = 0;
+int morph_size = 0;
+int morph_operator = 0;
 
 
 
@@ -86,9 +95,10 @@ for(i=0;i<MUESTRAS;i++){
   }
 	
 
-  //Recorte(0 , 0); // recorto imagen  
-  Filtros(0 , 0); // aplico los filtros
+  Recorte(0 , 0); // recorto imagen  
+ // Filtros(0 , 0); // aplico los filtros
   
+
   /// Wait until user exit program by pressing a key
   waitKey(0);
 
@@ -111,12 +121,12 @@ for(i=0;i<MUESTRAS;i++){
 
 //***********************Filtro de Dilatacion**********************************//
 
-  element = getStructuringElement( MORPH_RECT,  // Tipos: MORPH_RECT ;MORPH_CROSS;MORPH_ELLIPSE
+ /* element = getStructuringElement( MORPH_RECT,  // Tipos: MORPH_RECT ;MORPH_CROSS;MORPH_ELLIPSE
                                        Size( 2*dilation_size + 1, 2*dilation_size+1 ),
                                        Point( dilation_size, dilation_size ) );
 
   dilate( src[i], src[i], element );
-
+*/
 
 //***********************Paso a escala de grices**********************************//
 //
@@ -164,7 +174,6 @@ blur( src_gray[i], src_gray[i], Size(3,3) );  // (fuente , destino , tamaño)
 //	Valor 0 es negro - Valor 255 es blanco
 //	previo a aplicar la umbralizacion hay que pasar la foto a escala de grices
 //********************************************************************************************
-
 threshold( src_gray[i],AUX, 100+(10*i), 255,THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
 
 
@@ -214,61 +223,103 @@ if(i==9)
 
 void Recorte(int ,void*)
 {
-int i;
-size_t j,k,CUATRO;
-Mat AUX[MUESTRAS];
+int i,contador=0;
+size_t j,k,mayor=0;
+Mat AUX;
 Mat Resultado[MUESTRAS];
-Rect Recorte;
-Point Pto[20];
+Mat blanco,negro,loquede;
+Rect Rec_Mayor(0,0,0,0),Recorte(0,0,0,0);
+Point Pto[4];
 
-for(i=0;i<MUESTRAS;i++)
-{
-	cvtColor( src[i], AUX[i], CV_BGR2GRAY   );
+Mat Contornos_detectados = Mat::zeros( src[1].size(), CV_8UC3 );
+blanco=Mat::ones(src[1].size(),CV_8UC3);
+negro=Mat::zeros(src[1].size(),CV_8UC3);
+loquede=src[1].colRange(0,(src[1].cols)/2);
 
-	blur( AUX[i], AUX[i], Size(3,3) );  
+//absdiff(src[1],blanco,src_gray[1]);
 
-	threshold( AUX[i],AUX[i], 100+(10*i), 255,THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
+//threshold( src_gray[1],src_gray[1], 200, 255,THRESH_BINARY); //(entrada, salida,umbral , maximo valor, tipo)	
 
+//for(i=0;i<MUESTRAS;i++)
+//{
+
+
+	blur( src_gray[1], src_gray[1], Size(3,3) );  
+
+	threshold( src_gray[1],src_gray[1], 120, 255,THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
+
+//	Mat element = getStructuringElement( morph_elem, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
+
+//	morphologyEx(src_gray[1],src_gray[1],MORPH_OPEN,(5,5),Point(0,0),5,BORDER_CONSTANT,morphologyDefaultBorderValue());
+//	morphologyEx(src_gray[i],src_gray[i],MORPH_CLOSE,(5,5),Point(0,0),5,BORDER_CONSTANT,morphologyDefaultBorderValue());
+//	morphologyEx(src_gray[i],src_gray[i],MORPH_CLOSE,element );
+
+
+//	threshold( src_gray[i],src_gray[i], 100+(10*i), 255,THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
+
+	AUX=src_gray[1].clone();//trabajo con AUX y guardo src_gray como muestra original
  
+
 //Ver si reconoce al rectangulo sin el filtro canny
-//Canny(src_gray[i], canny_output, 100, 200 * 2); 
+	//Canny(AUX[i], AUX[i], 100, 200 * 2); 
 	
+	//Canny(src_gray[i], src_gray[i], 100, 200 * 2); 
+	//threshold( src_gray[i],src_gray[i], 100+(10*i), 255,	THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
+
+
 	vector<vector<Point> > contours;
 	CvSeq* secuencia_ptos;
 	vector<Vec4i> hierarchy;
 	CvMemStorage *storage = cvCreateMemStorage(0); //storage area for all contours
 	 
 
-	findContours(AUX[i], contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
 
-        
+
+//*******/
+//CV_RETR_EXTERNAL,CV_RETR_LIST,CV_RETR_CCOMP,CV_RETR_TREE
+//
+
+
+
+	findContours(AUX, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+        i=0;
+	j=0;
+
+   for(  k = 0; k < contours.size(); k++ )
+	{  
+	contador=contours[k].size();		
+	printf(" \n\n\t\t %d° Contador= %d",i,contador);
+	i++;
+	//filtro por mas grande
+	Recorte=boundingRect(contours[k]); //saco rectangulo de un contorn0
+	if(Recorte.width>Rec_Mayor.width) //comparo el ancho del rectangulo obtenido con el mayor guardado
+		{	
+		mayor=k;			//guardo que posicion del ancho nuevo
+		Rec_Mayor.width=Recorte.width;	//guardo el ancho mayor nuevo
+		}
+	}
+
+	printf("\n\n\t el mayor es el %d",mayor);
+       //imprimo contornos filtrados
    for(  k = 0; k < contours.size(); k++ )
 	{
-	approxPolyDP(contours[k],contours[k],3,true);
-	//filtramos los contornos distintos de 4
-	if(contours[k].size()==4) 
-	for(j=0;j<contours[k].size();j++)
-		{
-		//De aca saco los puntos para recortar
 
-
-		}	
-
-		
+	if(contours[k].size()>0)
+	   if(contours[k].size()<1000){
+	     Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
+	     drawContours( Contornos_detectados, contours, mayor, color, 2, 8, hierarchy, 0, Point() );
+		}
+        
 	}
-		
 
-      
-   	
-	rectangle(AUX[i], Recorte, cv::Scalar(0, 255, 0));
-
-
-        imwrite( "Recorte.jpg", AUX[5]);
-	//if(Recorte.width > 0 && Recorte.height>0)
+        imwrite( "Remarco.jpg", AUX);
+        imwrite( "Contornos_detectados.jpg", Contornos_detectados);
+	imwrite( "Control.jpg", src_gray[1]);
+		//if(Recorte.width > 0 && Recorte.height>0)
 	//	cv::imshow("imagen_recortada",src[i](Recorte));
 
 
-} // fin del for de MUESTRAS
+//} // fin del for de MUESTRAS
 
 
 }
