@@ -56,10 +56,12 @@ int const max_elem = 2;
 int const max_kernel_size = 21;
 
 //Variables para recortar imagen//
+Mat src_recortada;
 RNG rng(12345);
 int morph_elem = 0;
 int morph_size = 0;
 int morph_operator = 0;
+
 
 
 
@@ -94,9 +96,9 @@ for(i=0;i<MUESTRAS;i++){
   cvtColor( src[i], src_gray[i], COLOR_BGR2GRAY  );
   }
 	
-
+  Filtros(0 , 0); // aplico los filtros
   Recorte(0 , 0); // recorto imagen  
- // Filtros(0 , 0); // aplico los filtros
+ 
   
 
   /// Wait until user exit program by pressing a key
@@ -190,7 +192,7 @@ threshold( src_gray[i],AUX, 100+(10*i), 255,THRESH_BINARY_INV); //(entrada, sali
 
 //Escritura de los 10 ciclos
 if(i==0)
-  imwrite( "Foto0.jpg", src_gray[0]);
+  imwrite( "Foto0.jpg" , src_gray[0]);
 if(i==1)
   imwrite( "Foto1.jpg", AUX);
 if(i==2)
@@ -274,7 +276,6 @@ loquede=src[1].colRange(0,(src[1].cols)/2);
 	 
 
 
-
 //*******/
 //CV_RETR_EXTERNAL,CV_RETR_LIST,CV_RETR_CCOMP,CV_RETR_TREE
 //
@@ -296,6 +297,7 @@ loquede=src[1].colRange(0,(src[1].cols)/2);
 		{	
 		mayor=k;			//guardo que posicion del ancho nuevo
 		Rec_Mayor.width=Recorte.width;	//guardo el ancho mayor nuevo
+		Rec_Mayor=Recorte;
 		}
 	}
 
@@ -307,17 +309,17 @@ loquede=src[1].colRange(0,(src[1].cols)/2);
 	if(contours[k].size()>0)
 	   if(contours[k].size()<1000){
 	     Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-	     drawContours( Contornos_detectados, contours, mayor, color, 2, 8, hierarchy, 0, Point() );
+	     drawContours( Contornos_detectados, contours, k, color, 2, 8, hierarchy, 0, Point() );
 		}
         
 	}
-
+	src_recortada=src[1](Rec_Mayor);
+	imwrite( "Recorte.jpg",src_recortada);
         imwrite( "Remarco.jpg", AUX);
         imwrite( "Contornos_detectados.jpg", Contornos_detectados);
 	imwrite( "Control.jpg", src_gray[1]);
-		//if(Recorte.width > 0 && Recorte.height>0)
-	//	cv::imshow("imagen_recortada",src[i](Recorte));
 
+		
 
 //} // fin del for de MUESTRAS
 
