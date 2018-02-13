@@ -1,4 +1,8 @@
-#include "/home/matias/proyecto/opencv-2.4.13.4/release/opencv_contrib/modules/text/include/opencv2/text.hpp"
+//#include "/home/matias/proyecto/opencv-2.4.13.4/release/opencv_contrib/modules/text/include/opencv2/text/erfilter.hpp"
+//#include "/home/matias/proyecto/opencv-2.4.13.4/release/opencv_contrib/modules/text/include/opencv2/text/textDetector.hpp"
+//#include "/home/matias/proyecto/opencv-2.4.13.4/release/opencv_contrib/modules/text/include/opencv2/text/ocr.hpp"
+//#include "/home/matias/proyecto/opencv-2.4.13.4/release/opencv_contrib/modules/text/include/opencv2/text.hpp"
+#include "opencv2/text.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include <stdlib.h>
@@ -16,11 +20,15 @@
 #define MUESTRAS 10
 
 using namespace cv;
+using namespace cv::text;
 
 //	funciones   	 //
 
 void Filtros(int, void*);
-void Recorte(int, void*);
+void Recorte_ancho(int, void*);
+void Recorte_alto(int, void*);
+void Lectura(int ,void*);
+void T_morfologica(int ,void*);
 
 //	Global variables //
 
@@ -97,10 +105,16 @@ for(i=0;i<MUESTRAS;i++){
   }
 	
   Filtros(0 , 0); // aplico los filtros
-  Recorte(0 , 0); // recorto imagen  
- 
-  
+  Recorte_ancho(0 , 0); // recorto imagen  
 
+  cvtColor( src_recortada, src_recortada, COLOR_BGR2GRAY  );
+	
+  T_morfologica (0,0);
+
+//  Filtros(0 , 0); // aplico los filtros
+  Recorte_alto(0 , 0); // recorto imagen  
+
+  
   /// Wait until user exit program by pressing a key
   waitKey(0);
 
@@ -176,7 +190,7 @@ blur( src_gray[i], src_gray[i], Size(3,3) );  // (fuente , destino , tamaño)
 //	Valor 0 es negro - Valor 255 es blanco
 //	previo a aplicar la umbralizacion hay que pasar la foto a escala de grices
 //********************************************************************************************
-threshold( src_gray[i],AUX, 100+(10*i), 255,THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
+threshold( src_gray[i],AUX, 100+(10*i), 255,THRESH_BINARY); //(entrada, salida,umbral , maximo valor, tipo)
 
 
 
@@ -219,11 +233,11 @@ if(i==9)
 
 /*****************************************************************************************************
 
-					Recorte de patente
+					Recorte de patente por ancho
 
 *****************************************************************************************************/
 
-void Recorte(int ,void*)
+void Recorte_ancho(int ,void*)
 {
 int i,contador=0;
 size_t j,k,mayor=0;
@@ -250,11 +264,6 @@ loquede=src[1].colRange(0,(src[1].cols)/2);
 
 	threshold( src_gray[1],src_gray[1], 120, 255,THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
 
-//	Mat element = getStructuringElement( morph_elem, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
-
-//	morphologyEx(src_gray[1],src_gray[1],MORPH_OPEN,(5,5),Point(0,0),5,BORDER_CONSTANT,morphologyDefaultBorderValue());
-//	morphologyEx(src_gray[i],src_gray[i],MORPH_CLOSE,(5,5),Point(0,0),5,BORDER_CONSTANT,morphologyDefaultBorderValue());
-//	morphologyEx(src_gray[i],src_gray[i],MORPH_CLOSE,element );
 
 
 //	threshold( src_gray[i],src_gray[i], 100+(10*i), 255,THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
@@ -314,7 +323,113 @@ loquede=src[1].colRange(0,(src[1].cols)/2);
         
 	}
 	src_recortada=src[1](Rec_Mayor);
-	imwrite( "Recorte.jpg",src_recortada);
+	imwrite( "Recorte_1.jpg",src_recortada);
+        imwrite( "Remarco.jpg", AUX);
+        imwrite( "Contornos_detectados.jpg", Contornos_detectados);
+	imwrite( "Control.jpg", src_gray[1]);
+
+		
+
+//} // fin del for de MUESTRAS
+
+
+}
+
+/*****************************************************************************************************
+
+					Recorte de patente por altura
+
+*****************************************************************************************************/
+
+void Recorte_alto(int ,void*)
+{
+int i,contador=0;
+size_t j,k,mayor=0;
+Mat AUX;
+Mat Resultado[MUESTRAS];
+Mat blanco,negro,loquede;
+Rect Rec_Mayor(0,0,0,0),Recorte(0,0,0,0);
+Point Pto[4];
+
+Mat Contornos_detectados = Mat::zeros( src[1].size(), CV_8UC3 );
+blanco=Mat::ones(src[1].size(),CV_8UC3);
+negro=Mat::zeros(src[1].size(),CV_8UC3);
+loquede=src[1].colRange(0,(src[1].cols)/2);
+
+//absdiff(src[1],blanco,src_gray[1]);
+
+//threshold( src_gray[1],src_gray[1], 200, 255,THRESH_BINARY); //(entrada, salida,umbral , maximo valor, tipo)	
+
+//for(i=0;i<MUESTRAS;i++)
+//{
+
+
+	blur( src_recortada,src_recortada, Size(3,3) );  
+
+	threshold( src_recortada,src_recortada, 120, 255,THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
+
+
+
+
+
+//	threshold( src_gray[i],src_gray[i], 100+(10*i), 255,THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
+
+	AUX=src_recortada.clone();//trabajo con AUX y guardo src_gray como muestra original
+ 
+
+//Ver si reconoce al rectangulo sin el filtro canny
+	//Canny(AUX[i], AUX[i], 100, 200 * 2); 
+	
+	//Canny(src_gray[i], src_gray[i], 100, 200 * 2); 
+	//threshold( src_gray[i],src_gray[i], 100+(10*i), 255,	THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
+
+
+	vector<vector<Point> > contours;
+	CvSeq* secuencia_ptos;
+	vector<Vec4i> hierarchy;
+	CvMemStorage *storage = cvCreateMemStorage(0); //storage area for all contours
+	 
+
+
+//*******/
+//CV_RETR_EXTERNAL,CV_RETR_LIST,CV_RETR_CCOMP,CV_RETR_TREE
+//
+
+
+
+	findContours(AUX, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+        i=0;
+	j=0;
+
+   for(  k = 0; k < contours.size(); k++ )
+	{  
+	contador=contours[k].size();		
+	printf(" \n\n\t\t %d° Contador= %d",i,contador);
+	i++;
+	//filtro por mas grande
+	Recorte=boundingRect(contours[k]); //saco rectangulo de un contorn0
+	if(Recorte.height>Rec_Mayor.height) //comparo el ancho del rectangulo obtenido con el mayor guardado
+		{	
+		mayor=k;			//guardo que posicion del ancho nuevo
+		Rec_Mayor.height=Recorte.height;	//guardo el ancho mayor nuevo
+		Rec_Mayor=Recorte;
+		}
+	}
+
+	printf("\n\n\t el mayor es el %d\n",mayor);
+       //imprimo contornos filtrados
+   for(  k = 0; k < contours.size(); k++ )
+	{
+
+	if(contours[k].size()>0)
+	   if(contours[k].size()<1000){
+	     Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
+	     drawContours( Contornos_detectados, contours, k, color, 2, 8, hierarchy, 0, Point() );
+		}
+        
+	}
+	src_recortada=src_recortada(Rec_Mayor);
+	imwrite( "Recorte_2.jpg",src_recortada);
         imwrite( "Remarco.jpg", AUX);
         imwrite( "Contornos_detectados.jpg", Contornos_detectados);
 	imwrite( "Control.jpg", src_gray[1]);
@@ -327,8 +442,46 @@ loquede=src[1].colRange(0,(src[1].cols)/2);
 }
 
 
+/*****************************************************************************************************
+
+					trasformaciones morfologicas
+
+*****************************************************************************************************/
 
 
+void T_morfologica(int ,void*)
+{
+	int iteraciones=10;
+
+	threshold( src_recortada,src_recortada, 120, 255,THRESH_BINARY_INV);
+
+	//erode(src_recortada,src_recortada,(3,3),Point(-1,-1),iteraciones,BORDER_CONSTANT,morphologyDefaultBorderValue());
+
+//	Mat element = getStructuringElement( morph_elem, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
+
+//	morphologyEx(src_recortada,src_recortada,MORPH_OPEN,(3,3),Point(0,0),1,BORDER_CONSTANT,morphologyDefaultBorderValue());
+//	morphologyEx(src_recortada,src_recortada,MORPH_CLOSE,(3,3),Point(0,0),1,BORDER_CONSTANT,morphologyDefaultBorderValue());
+//	morphologyEx(src_gray[i],src_gray[i],MORPH_CLOSE,element );
+
+	imwrite( "Recorte_3.jpg",src_recortada);
+}
+
+
+/*****************************************************************************************************
+
+					Lectura de patentes
+
+*****************************************************************************************************/
+
+
+void Lectura(int ,void*)
+{
+
+vector<Mat> canales;
+//computeNMChannels(src_recortada, canales);
+
+//run(src_recortada,canales);
+}
 
 
 
