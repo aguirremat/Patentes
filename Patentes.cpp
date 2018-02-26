@@ -1,4 +1,4 @@
-//#include "/home/matias/proyecto/opencv-2.4.13.4/release/opencv_contrib/modules/text/include/opencv2/text/erfilter.hpp"
+//#include "/home4/matias/proyecto/opencv-2.4.13.4/release/opencv_contrib/modules/text/include/opencv2/text/erfilter.hpp"
 //#include "/home/matias/proyecto/opencv-2.4.13.4/release/opencv_contrib/modules/text/include/opencv2/text/textDetector.hpp"
 //#include "/home/matias/proyecto/opencv-2.4.13.4/release/opencv_contrib/modules/text/include/opencv2/text/ocr.hpp"
 //#include "/home/matias/proyecto/opencv-2.4.13.4/release/opencv_contrib/modules/text/include/opencv2/text.hpp"
@@ -16,25 +16,31 @@
 #include <sys/ioctl.h>
 
 
+//#include "tesseractclass.cpp"
 
-#define MUESTRAS 10
 
+#define MUESTRAS 5
+
+using namespace std;
 using namespace cv;
 using namespace cv::text;
 
+
 //	funciones   	 //
 
-void Filtros(int, void*);
-void Recorte_ancho(int, void*);
-void Recorte_alto(int, void*);
-void Lectura(int ,void*);
-void T_morfologica(int ,void*);
+void Filtros   		(int ,void*);
+void Recorte_ancho	(Mat , int );
+void Recorte_alto	(Mat , int );
+void Lectura		(int ,void*);
+void T_morfologica	(Mat , int );
+
 
 //	Global variables //
 
 Mat src[MUESTRAS],src_gray[MUESTRAS];
+Mat Guardado[MUESTRAS];
 Mat dst, detected_edges;
-
+//char nombre[40]
 
 
 int edgeThresh = 1;
@@ -42,7 +48,6 @@ int lowThreshold;
 int const max_lowThreshold = 100;
 int ratio = 3;
 int kernel_size = 3;
-char* window_name = "Patente";
 int  Minimo_Filtro=0;
 int  Maximo_Filtro=10;
 double rho=10;
@@ -64,12 +69,12 @@ int const max_elem = 2;
 int const max_kernel_size = 21;
 
 //Variables para recortar imagen//
-Mat src_recortada;
+Mat src_recortada_1[MUESTRAS];
+Mat src_recortada_2[MUESTRAS];
 RNG rng(12345);
 int morph_elem = 0;
 int morph_size = 0;
 int morph_operator = 0;
-
 
 
 
@@ -85,36 +90,38 @@ int main( int argc, char** argv )
  int i;
   /// Load an image
  for(i=0;i<MUESTRAS;i++){
-  src[i] = imread( argv[1] ); //Genero un vector de con copias de la foto original
+	  src[i] = imread( argv[1] ); //Genero un vector de con copias de la foto original
+	  Guardado[i]=src[i].clone(); //Genero un vector de con copias de respaldo
+
+	  if( !src[i].data )
+	  { return -1; }
+
+	  imwrite("Resultados/original.jpg",Guardado[0]);
 	
-  if( !src[i].data )
-  { return -1; }
+	  /// convierto imagen fuente en escala de grices
+	  cvtColor( src[i], src_gray[i], COLOR_BGR2GRAY  );	 
+
+	  //aplico filtros con "i" * iteraciones 
+	  T_morfologica(src[i],i);
+ 
+ 	
+
+
+
+
+	
   }
 
- 
- 
-
-//cvtColor(src[0], src[0], COLOR_BGR2Luv);
-
-for(i=0;i<MUESTRAS;i++){
-  /// Create a matrix of the same type and size as src (for dst)
-  dst.create(src[i].size(), src[i].type() );
- 
-  /// Convert the image to grayscale
-  cvtColor( src[i], src_gray[i], COLOR_BGR2GRAY  );
-  }
-	
   Filtros(0 , 0); // aplico los filtros
-  Recorte_ancho(0 , 0); // recorto imagen  
 
-  cvtColor( src_recortada, src_recortada, COLOR_BGR2GRAY  );
+ for(i=0;i<MUESTRAS;i++){
+ 	 Recorte_ancho(src_gray[i] , i); // recorto imagen por ancho
+
+ 	 cvtColor( src_recortada_1[i], src_recortada_1[i], COLOR_BGR2GRAY  );
 	
-  T_morfologica (0,0);
-
-//  Filtros(0 , 0); // aplico los filtros
-  Recorte_alto(0 , 0); // recorto imagen  
-
-  
+	  Recorte_alto(src_recortada_1[i] , i); // recorto imagen  por alto
+  }
+  printf("\n\n\t\tFIN DEL PROGRAMA\n");
   /// Wait until user exit program by pressing a key
   waitKey(0);
 
@@ -190,6 +197,7 @@ blur( src_gray[i], src_gray[i], Size(3,3) );  // (fuente , destino , tamaño)
 //	Valor 0 es negro - Valor 255 es blanco
 //	previo a aplicar la umbralizacion hay que pasar la foto a escala de grices
 //********************************************************************************************
+
 threshold( src_gray[i],AUX, 100+(10*i), 255,THRESH_BINARY); //(entrada, salida,umbral , maximo valor, tipo)
 
 
@@ -198,38 +206,34 @@ threshold( src_gray[i],AUX, 100+(10*i), 255,THRESH_BINARY); //(entrada, salida,u
 //bitwise_not( detected_edges, dst );
 //***********************************************************************************************
 
+//Escritura de las 10 muestras
 
-  /// Using Canny's output as a mask, we display our result
- // dst = Scalar::all(0);
+	if(i==0)
+		imwrite("Resultados/Foto0.jpg",AUX);
+	if(i==1)
+		imwrite("Resultados/Foto1.jpg",AUX);	 
+	if(i==2)
+		imwrite("Resultados/Foto2.jpg",AUX);	 
+	if(i==3)
+		imwrite("Resultados/Foto3.jpg",AUX);	 
+	if(i==4)
+		imwrite("Resultados/Foto4.jpg",AUX);	 
+	if(i==5)
+		imwrite("Resultados/Foto5.jpg",AUX);	 
+	if(i==6)
+		imwrite("Resultados/Foto6.jpg",AUX);	 
+	if(i==7)
+		imwrite("Resultados/Foto7.jpg",AUX);	 
+	if(i==8)
+		imwrite("Resultados/Foto8.jpg",AUX);	 
+	if(i==9)
+		imwrite("Resultados/Foto9.jpg",AUX);
 
- //src[i].copyTo( dst, AUX);
+	
 
-//Escritura de los 10 ciclos
-if(i==0)
-  imwrite( "Foto0.jpg" , src_gray[0]);
-if(i==1)
-  imwrite( "Foto1.jpg", AUX);
-if(i==2)
-  imwrite( "Foto2.jpg", AUX);
-if(i==3)
-  imwrite( "Foto3.jpg", AUX);
-if(i==4)
-  imwrite( "Foto4.jpg", AUX);
-if(i==5)
-  imwrite( "Foto5.jpg", AUX);	
-if(i==6)
-  imwrite( "Foto6.jpg", AUX);
-if(i==7)
-  imwrite( "Foto7.jpg", AUX);
-if(i==8)
-  imwrite( "Foto8.jpg", AUX);
-if(i==9)
-  imwrite( "Foto9.jpg", AUX);
- // imshow window_name, dst );
+
   }
  }
-
-
 
 /*****************************************************************************************************
 
@@ -237,14 +241,14 @@ if(i==9)
 
 *****************************************************************************************************/
 
-void Recorte_ancho(int ,void*)
+void Recorte_ancho(Mat AUX ,int veces)
 {
 int i,contador=0;
 size_t j,k,mayor=0;
-Mat AUX;
 Mat Resultado[MUESTRAS];
 Mat blanco,negro,loquede;
-Rect Rec_Mayor(0,0,0,0),Recorte(0,0,0,0);
+Rect Rec_Mayor(0,0,0,0), Rec_Menor(0,0,0,0);
+Rect Recorte(0,0,0,0);
 Point Pto[4];
 
 Mat Contornos_detectados = Mat::zeros( src[1].size(), CV_8UC3 );
@@ -260,15 +264,15 @@ loquede=src[1].colRange(0,(src[1].cols)/2);
 //{
 
 
-	blur( src_gray[1], src_gray[1], Size(3,3) );  
+	blur( AUX,AUX, Size(3,3) );  
 
-	threshold( src_gray[1],src_gray[1], 120, 255,THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
+	threshold( AUX,AUX, 120, 255,THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
 
 
 
 //	threshold( src_gray[i],src_gray[i], 100+(10*i), 255,THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
 
-	AUX=src_gray[1].clone();//trabajo con AUX y guardo src_gray como muestra original
+//	AUX=src_gray[1].clone();//trabajo con AUX y guardo src_gray como muestra original
  
 
 //Ver si reconoce al rectangulo sin el filtro canny
@@ -291,42 +295,84 @@ loquede=src[1].colRange(0,(src[1].cols)/2);
 
 
 
-	findContours(AUX, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+	findContours(AUX, contours, hierarchy,CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
         i=0;
 	j=0;
 
-   for(  k = 0; k < contours.size(); k++ )
+  for(  k = 0; k < contours.size(); k++ )
+	if(contours[k].size())	
 	{  
 	contador=contours[k].size();		
 	printf(" \n\n\t\t %d° Contador= %d",i,contador);
 	i++;
 	//filtro por mas grande
-	Recorte=boundingRect(contours[k]); //saco rectangulo de un contorn0
+//	if(contours[k].size())	
+		Recorte=boundingRect(contours[k]); //saco rectangulo de un contorn0
+
+
 	if(Recorte.width>Rec_Mayor.width) //comparo el ancho del rectangulo obtenido con el mayor guardado
+	   if(contours[k].size()>500)
+	   if(contours[k].size()<1000)
 		{	
 		mayor=k;			//guardo que posicion del ancho nuevo
 		Rec_Mayor.width=Recorte.width;	//guardo el ancho mayor nuevo
-		Rec_Mayor=Recorte;
+		Rec_Mayor=Recorte;		//guardo el alto menor
 		}
 	}
 
-	printf("\n\n\t el mayor es el %d",mayor);
+	printf("\n\n\t el mayor es el %d y el ancho es %d",mayor,Rec_Mayor.width);
+
+
        //imprimo contornos filtrados
    for(  k = 0; k < contours.size(); k++ )
+	if(contours[k].size())
 	{
-
-	if(contours[k].size()>0)
-	   if(contours[k].size()<1000){
+	if(contours[k].size()>000)
+	   if(contours[k].size()<2000){
 	     Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
 	     drawContours( Contornos_detectados, contours, k, color, 2, 8, hierarchy, 0, Point() );
-		}
-        
+		}        
 	}
-	src_recortada=src[1](Rec_Mayor);
-	imwrite( "Recorte_1.jpg",src_recortada);
-        imwrite( "Remarco.jpg", AUX);
-        imwrite( "Contornos_detectados.jpg", Contornos_detectados);
-	imwrite( "Control.jpg", src_gray[1]);
+
+//	src_recortada_1[veces]=Guardado[veces](Rec_Mayor);
+	src_recortada_1[veces]=src[veces](Rec_Mayor);
+//cvtColor(  src_recortada_1[veces],src_recortada_1[veces], CV_BGR2GRAY   );
+//
+threshold( src_recortada_1[veces],src_recortada_1[veces], 120, 255,THRESH_BINARY_INV);
+
+//Imprimo las imagenes recortadas
+if(veces==0){
+	imwrite( "Resultados/Recorte_0_1.jpg",src_recortada_1[veces]);
+        imwrite("Resultados/Contornos_detectados_0_1.jpg",Contornos_detectados);}
+if(veces==1){
+	imwrite( "Resultados/Recorte_1_1.jpg",src_recortada_1[veces]);
+        imwrite( "Resultados/Contornos_detectados_1_1.jpg",Contornos_detectados);}        
+if(veces==2){
+	imwrite( "Resultados/Recorte_2_1.jpg",src_recortada_1[veces]);
+        imwrite("Resultados/Contornos_detectados_2_1.jpg",Contornos_detectados);}
+if(veces==3){
+	imwrite( "Resultados/Recorte_3_1.jpg",src_recortada_1[veces]);
+        imwrite( "Resultados/Contornos_detectados_3_1.jpg",Contornos_detectados);}	
+if(veces==4){
+	imwrite("Resultados/Recorte_4_1.jpg",src_recortada_1[veces]);
+        imwrite("Resultados/Contornos_detectados_4_1.jpg",Contornos_detectados);}
+if(veces==5){
+	imwrite("Resultados/Recorte_5_1.jpg",src_recortada_1[veces]);
+        imwrite( "Resultados/Contornos_detectados_5_1.jpg",Contornos_detectados);}
+if(veces==6){
+	imwrite( "Resultados/Recorte_6_1.jpg",src_recortada_1[veces]);
+        imwrite( "Resultados/Contornos_detectados_6_1.jpg",Contornos_detectados);}        
+if(veces==7){
+	imwrite("Resultados/Recorte_7_1.jpg",src_recortada_1[veces]);
+        imwrite( "Resultados/Contornos_detectados_7_1.jpg",Contornos_detectados);}
+if(veces==8){
+	imwrite("Resultados/Recorte_8_1.jpg",src_recortada_1[veces]);
+        imwrite("Resultados/Contornos_detectados_8_1.jpg",Contornos_detectados);}	
+if(veces==9){
+	imwrite( "Resultados/Recorte_9_1.jpg",src_recortada_1[veces]);
+        imwrite( "Resultados/Contornos_detectados_9_1.jpg",Contornos_detectados);}
+
+//src[veces]=src_recortada.clone();
 
 		
 
@@ -341,11 +387,10 @@ loquede=src[1].colRange(0,(src[1].cols)/2);
 
 *****************************************************************************************************/
 
-void Recorte_alto(int ,void*)
+void Recorte_alto(Mat AUX ,int veces)
 {
 int i,contador=0;
 size_t j,k,mayor=0;
-Mat AUX;
 Mat Resultado[MUESTRAS];
 Mat blanco,negro,loquede;
 Rect Rec_Mayor(0,0,0,0),Recorte(0,0,0,0);
@@ -364,17 +409,15 @@ loquede=src[1].colRange(0,(src[1].cols)/2);
 //{
 
 
-	blur( src_recortada,src_recortada, Size(3,3) );  
+	blur( AUX,AUX, Size(3,3) );  
 
-	threshold( src_recortada,src_recortada, 120, 255,THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
-
-
+	threshold( AUX,AUX, 120, 255,THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
 
 
 
 //	threshold( src_gray[i],src_gray[i], 100+(10*i), 255,THRESH_BINARY_INV); //(entrada, salida,umbral , maximo valor, tipo)
 
-	AUX=src_recortada.clone();//trabajo con AUX y guardo src_gray como muestra original
+//	AUX=src_recortada.clone();//trabajo con AUX y guardo src_gray como muestra original
  
 
 //Ver si reconoce al rectangulo sin el filtro canny
@@ -402,13 +445,16 @@ loquede=src[1].colRange(0,(src[1].cols)/2);
 	j=0;
 
    for(  k = 0; k < contours.size(); k++ )
+	if(contours[k].size())	
 	{  
 	contador=contours[k].size();		
 	printf(" \n\n\t\t %d° Contador= %d",i,contador);
 	i++;
 	//filtro por mas grande
-	Recorte=boundingRect(contours[k]); //saco rectangulo de un contorn0
+	//if(contours[k].size())
+		Recorte=boundingRect(contours[k]); //saco rectangulo de un contorn0
 	if(Recorte.height>Rec_Mayor.height) //comparo el ancho del rectangulo obtenido con el mayor guardado
+
 		{	
 		mayor=k;			//guardo que posicion del ancho nuevo
 		Rec_Mayor.height=Recorte.height;	//guardo el ancho mayor nuevo
@@ -416,9 +462,10 @@ loquede=src[1].colRange(0,(src[1].cols)/2);
 		}
 	}
 
-	printf("\n\n\t el mayor es el %d\n",mayor);
+	printf("\n\n\t el mayor es el %d y el alto es %d\n",mayor,Rec_Mayor.height);
        //imprimo contornos filtrados
    for(  k = 0; k < contours.size(); k++ )
+	if(contours[k].size())
 	{
 
 	if(contours[k].size()>0)
@@ -428,13 +475,40 @@ loquede=src[1].colRange(0,(src[1].cols)/2);
 		}
         
 	}
-	src_recortada=src_recortada(Rec_Mayor);
-	imwrite( "Recorte_2.jpg",src_recortada);
-        imwrite( "Remarco.jpg", AUX);
-        imwrite( "Contornos_detectados.jpg", Contornos_detectados);
-	imwrite( "Control.jpg", src_gray[1]);
+src_recortada_2[veces]=src[veces](Rec_Mayor);
 
-		
+//Imprimo las imagenes recortadas
+if(veces==0){
+	imwrite( "Resultados/Recorte_0_2.jpg",src_recortada_2[veces]);
+        imwrite("Contornos_detectados_0_2.jpg",Contornos_detectados);}
+if(veces==1){
+	imwrite( "Resultados/Recorte_1_2.jpg",src_recortada_2[veces]);
+        imwrite( "Contornos_detectados_1_2.jpg",Contornos_detectados);}        
+if(veces==2){
+	imwrite( "Resultados/Recorte_2_2.jpg",src_recortada_2[veces]);
+        imwrite("Contornos_detectados_2_2.jpg",Contornos_detectados);}
+if(veces==3){
+	imwrite( "Resultados/Recorte_3_2.jpg",src_recortada_2[veces]);
+        imwrite( "Contornos_detectados_3_2.jpg",Contornos_detectados);}	
+if(veces==4){
+	imwrite("Resultados/Recorte_4_2.jpg",src_recortada_2[veces]);
+        imwrite("Contornos_detectados_4_2.jpg",Contornos_detectados);}
+if(veces==5){
+	imwrite("Resultados/Recorte_5_2.jpg",src_recortada_2[veces]);
+        imwrite( "Contornos_detectados_5_2.jpg",Contornos_detectados);}
+if(veces==6){
+	imwrite( "Resultados/Recorte_6_2.jpg",src_recortada_2[veces]);
+        imwrite( "Contornos_detectados_6_2.jpg",Contornos_detectados);}        
+if(veces==7){
+	imwrite("Resultados/Recorte_7_2.jpg",src_recortada_2[veces]);
+        imwrite( "Contornos_detectados_7_2.jpg",Contornos_detectados);}
+if(veces==8){
+	imwrite("Resultados/Recorte_8_2.jpg",src_recortada_2[veces]);
+        imwrite("Contornos_detectados_8_2.jpg",Contornos_detectados);}	
+if(veces==9){
+	imwrite( "Resultados/Recorte_9_2.jpg",src_recortada_2[veces]);
+        imwrite( "Contornos_detectados_9_2.jpg",Contornos_detectados);}
+
 
 //} // fin del for de MUESTRAS
 
@@ -449,22 +523,24 @@ loquede=src[1].colRange(0,(src[1].cols)/2);
 *****************************************************************************************************/
 
 
-void T_morfologica(int ,void*)
+void T_morfologica(Mat AUX ,int veces)
 {
-	int iteraciones=10;
+	int iteraciones=5;
+	Mat kernel;
+	kernel = Mat::ones( kernel_size, kernel_size, CV_32F )/ (float)(kernel_size*kernel_size);
 
-	threshold( src_recortada,src_recortada, 120, 255,THRESH_BINARY_INV);
+	threshold( AUX,AUX, 120, 255,THRESH_BINARY_INV);
 
-	//erode(src_recortada,src_recortada,(3,3),Point(-1,-1),iteraciones,BORDER_CONSTANT,morphologyDefaultBorderValue());
+//	erode(AUX,AUX,kernel,Point(-1,-1),iteraciones*veces,BORDER_CONSTANT,morphologyDefaultBorderValue());
+//	dilate(AUX,AUX,kernel,Point(-1,-1),iteraciones*veces,BORDER_CONSTANT,morphologyDefaultBorderValue());
 
-//	Mat element = getStructuringElement( morph_elem, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
+	morphologyEx(AUX,AUX,MORPH_OPEN,kernel,Point(-1,-1),iteraciones*veces,BORDER_CONSTANT,morphologyDefaultBorderValue());
+	morphologyEx(AUX,AUX,MORPH_CLOSE,kernel,Point(-1,-1),iteraciones*veces,BORDER_CONSTANT,morphologyDefaultBorderValue());
 
-//	morphologyEx(src_recortada,src_recortada,MORPH_OPEN,(3,3),Point(0,0),1,BORDER_CONSTANT,morphologyDefaultBorderValue());
-//	morphologyEx(src_recortada,src_recortada,MORPH_CLOSE,(3,3),Point(0,0),1,BORDER_CONSTANT,morphologyDefaultBorderValue());
-//	morphologyEx(src_gray[i],src_gray[i],MORPH_CLOSE,element );
 
-	imwrite( "Recorte_3.jpg",src_recortada);
+
 }
+
 
 
 /*****************************************************************************************************
@@ -482,15 +558,3 @@ vector<Mat> canales;
 
 //run(src_recortada,canales);
 }
-
-
-
-
-
-
-
-
-
-
-
-
